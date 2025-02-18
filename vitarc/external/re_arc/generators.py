@@ -1,5 +1,5 @@
-from dsl import *
-from utils import *
+from .dsl import *
+from .utils import *
 
 
 

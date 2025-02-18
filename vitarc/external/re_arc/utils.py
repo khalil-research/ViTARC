@@ -3,7 +3,7 @@ from matplotlib.colors import ListedColormap, Normalize
 
 from random import choice, randint, sample, shuffle, uniform
 
-from dsl import *
+from .dsl import *
 
 
 global rng

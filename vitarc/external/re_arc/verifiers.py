@@ -1,4 +1,4 @@
-from dsl import *
+from .dsl import *
 
 
 

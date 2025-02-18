@@ -1,0 +1,16 @@
+setup.py
+ViTARC.egg-info/PKG-INFO
+ViTARC.egg-info/SOURCES.txt
+ViTARC.egg-info/dependency_links.txt
+ViTARC.egg-info/requires.txt
+ViTARC.egg-info/top_level.txt
+vitarc/__init__.py
+vitarc/external/__init__.py
+vitarc/external/re_arc/__init__.py
+vitarc/external/re_arc/dsl.py
+vitarc/external/re_arc/generators.py
+vitarc/external/re_arc/main.py
+vitarc/external/re_arc/utils.py
+vitarc/external/re_arc/verifiers.py
+vitarc/tokenizers/__init__.py
+vitarc/tokenizers/arc_tokenizer.py

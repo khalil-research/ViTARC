@@ -1,0 +1,27 @@
+Metadata-Version: 2.2
+Name: ViTARC
+Version: 0.1.0
+Summary: ViTARC: A custom ARC dataset generation and T5-based 2D-ViT model project.
+Home-page: https://github.com/khalil-research/ViTARC
+Author: Wenhao Li
+License: MIT
+Requires-Python: >=3.10
+Requires-Dist: aiohttp>=3.11.12
+Requires-Dist: datasets>=2.20.0
+Requires-Dist: numpy>=2.2.3
+Requires-Dist: torch>=2.6.0
+Requires-Dist: transformers>=4.49.0
+Requires-Dist: opencv-python>=4.11.0.86
+Requires-Dist: prettytable>=3.14.0
+Requires-Dist: pytorch-lightning>=2.5.0
+Requires-Dist: scikit-learn>=1.6.1
+Requires-Dist: sentencepiece>=0.2.0
+Requires-Dist: tokenizers>=0.21.0
+Requires-Dist: tqdm>=4.67.1
+Requires-Dist: pyarrow>=19.0.0
+Dynamic: author
+Dynamic: home-page
+Dynamic: license
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

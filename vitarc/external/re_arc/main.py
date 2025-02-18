@@ -5,14 +5,14 @@ import json
 
 from random import seed as set_seed
 
-import dsl
-from dsl import *
+from . import dsl
+from .dsl import *
 
-import utils
-from utils import *
+from . import utils
+from .utils import *
 
-import generators
-import verifiers
+from . import generators
+from . import verifiers
 
 
 
