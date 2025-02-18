@@ -1,0 +1,13 @@
+# Ignore the virtual environment folder
+venv/
+
+# Ignore the test_cuda.py script
+test_cuda.py
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Mac / Windows system files
+.DS_Store
+Thumbs.db
