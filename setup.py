@@ -5,7 +5,7 @@ setup(
     name="ViTARC",
     version="0.1.0",
     packages=find_packages(),  # Automatically finds any folder with __init__.py
-    python_requires="==3.10.12",
+    python_requires=">=3.10",
     install_requires=[
         "aiohttp==3.9.1",
         "aiosignal==1.3.1",
