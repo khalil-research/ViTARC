@@ -125,18 +125,48 @@ This returns a tokenizer configured for ARC-like inputs/outputs. See `tests/test
 
 ## Model Overview
 
-**`ViTARCForConditionalGeneration`** is a specialized T5-based model that introduces:
+**`ViTARCForConditionalGeneration`** is a specialized T5-based model for the ViTARC project, extending `T5ForConditionalGeneration`. It adds various positional-embedding and relative-attention features beyond vanilla T5:
 
-- 2D absolute positional embeddings (`ape_type="SinusoidalAPE2D"`)
-- Relative attention with four-slope Alibi (`rpe_type="Four-diag-slope-Alibi"`)
-- Object-based embeddings (`use_OPE=True`)
-- Custom embedding mixer strategies (`ape_mixer="weighted_sum_no_norm_vec"`), etc.
+- **2D absolute positional embeddings** (`ape_type="SinusoidalAPE2D"`, etc.)
+- **Relative attention** with multi-slope Alibi (`rpe_type="Four-diag-slope-Alibi"` or `"Two-slope-Alibi"`)
+- **Object-based embeddings** (controlled by `use_OPE=True` or False)
+- **Custom embedding mixer** strategies (`ape_mixer="weighted_sum_no_norm_vec"`, `"learnable_scaling"`, etc.)
 
-Example usage:
+### Configuration Fields
+When instantiating `ViTARCForConditionalGeneration` via a `T5Config`, the model looks for the following fields (if present):
+
+- **`ape_type`** (`str`):
+  - Examples: `"SinusoidalAPE"`, `"SinusoidalAPE2D"`, `"LearnedAPE"`, or `"none"`.
+  - Defaults to `"SinusoidalAPE2D"`.
+- **`rpe_type`** (`str`):
+  - Examples: `"Four-diag-slope-Alibi"`, `"Two-slope-Alibi"`.
+  - Defaults to `"Two-slope-Alibi"`.
+- **`rpe_abs`** (`bool`):
+  - Whether to combine absolute & relative positional embeddings (or not).
+  - Defaults to `True` if not set.
+- **`use_OPE`** (`bool`):
+  - Enables object-based embeddings. Defaults to `True`.
+- **`ape_mixer`** (`str`):
+  - Supported strategies:
+      - 'hardcoded_normalization'
+      - 'learnable_scaling'
+      - 'weighted_sum'
+      - 'weighted_sum_no_norm'
+      - 'learnable_scaling_vec'
+      - 'weighted_sum_vec'
+      - 'weighted_sum_no_norm_vec'
+      - 'positional_attention'
+      - 'layer_norm'
+      - 'default'
+
+Below is an example usage that sets some of these fields:
 
 ```python
 from transformers import T5Config
 from vitarc.models.model import ViTARCForConditionalGeneration
+from vitarc.tokenizers.arc_tokenizer import get_or_build_arc_tokenizer
+
+tokenizer = get_or_build_arc_tokenizer("arc_tokenizer_v1")
 
 config = T5Config(
     vocab_size=len(tokenizer),
@@ -150,16 +180,19 @@ config = T5Config(
     eos_token_id=tokenizer.eos_token_id,
     bos_token_id=tokenizer.bos_token_id,
     decoder_start_token_id=tokenizer.pad_token_id,
-    rows=33,
-    cols=34,
+    rows=33,   # Custom field used by ViTARC for 2D embeddings
+    cols=34,   # Custom field used by ViTARC for 2D embeddings
+
+    # ViTARC-specific fields:
     ape_type="SinusoidalAPE2D",
-    rpe_type="Four-diag-slope-Alibi",
+    rpe_type="Two-slope-Alibi",    
     rpe_abs=True,
     use_OPE=True,
-    ape_mixer="weighted_sum_no_norm_vec"
+    ape_mixer="weighted_sum_no_norm_vec",  # or "learnable_scaling", "weighted_sum", ...
 )
 
 model = ViTARCForConditionalGeneration(config)
+
 ```
 
 See `vitarc/training/train.py` for a full training loop based on PyTorch Lightning.
