@@ -229,7 +229,7 @@ class CustomT5Attention(T5Attention):
         else:
             closest_power_of_2 = 2 ** math.floor(math.log2(n))
             return (get_geometric_slopes(closest_power_of_2, start_exponent) +
-                    get_slopes(2 * closest_power_of_2, start_exponent)[0::2][:n - closest_power_of_2])    
+                    self.get_slopes(2 * closest_power_of_2, start_exponent)[0::2][:n - closest_power_of_2])    
 
     def compute_bias(self, query_length, key_length, device=None, relative_position=None):
         """Compute binned relative position bias"""
@@ -680,9 +680,15 @@ class CustomT5Stack(T5Stack):
             self.distance_matrix_2D = distance_matrix            
 
     def calculate_2d_relative_positions(self, grid_height, grid_width):
-        # Define direction-specific factors
-        top_right_factor = 2 ** 0.25
-        down_right_factor = 2 ** 0.25
+        if self.rpe_type == "Four-diag-slope-Alibi":
+            # Define direction-specific factors
+            # Pre-mult those to diagonal directions
+            top_right_factor = 2 ** 0.25
+            down_right_factor = 2 ** 0.25
+        else:
+            top_right_factor = 1.0
+            down_right_factor = 1.0
+        
 
         # Create grid coordinates
         x_coords, y_coords = torch.meshgrid(
@@ -1086,7 +1092,7 @@ class ViTARCForConditionalGeneration(T5ForConditionalGeneration):
 
     This model can read the following fields from the T5Config (if present):
       - ape_type (str): e.g. 'SinusoidalAPE', 'SinusoidalAPE2D', 'LearnedAPE', or 'none'. Defaults to 'SinusoidalAPE2D'.
-      - rpe_type (str): e.g. 'Four-diag-slope-Alibi'. Defaults to 'Four-diag-slope-Alibi'.
+      - rpe_type (str): e.g. 'Four-diag-slope-Alibi','Two-slope-Alibi'. Defaults to 'Four-diag-slope-Alibi'.
       - rpe_abs (bool): default True or False if not present.
       - use_OPE (bool): default True.
       - ape_mixer (str): indicates the approach to mixing embeddings, e.g. 'learnable_scaling', 'weighted_sum', etc.
@@ -1187,7 +1193,7 @@ class ViTARCForConditionalGeneration(T5ForConditionalGeneration):
         # FutureWarning: head_mask was separated into two input args - head_mask, decoder_head_mask
         if head_mask is not None and decoder_head_mask is None:
             if self.config.num_layers == self.config.num_decoder_layers:
-                warnings.warn(__HEAD_MASK_WARNING_MSG, FutureWarning)
+                #warnings.warn(__HEAD_MASK_WARNING_MSG, FutureWarning)
                 decoder_head_mask = head_mask
 
         # Encode if needed (training, first prediction pass)
