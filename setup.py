@@ -11,7 +11,7 @@ setup(
         "numpy>=1.20,<2.0",        
         "torch>=2.3",
         "pytorch-lightning>=2.1",
-        "transformers>=4.30",
+        "transformers==4.44.2",
         "datasets==2.20.0",
         "scikit_learn>=1.0",
         "sentencepiece>=0.1.0",

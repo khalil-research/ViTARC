@@ -61,7 +61,7 @@ set_random_seed(seed)
 bleu = load_metric("sacrebleu", trust_remote_code=True) 
 
 # If you have a local tokenizer:
-tokenizer = hf_tokenizer = get_or_build_arc_tokenizer("arc_tokenizer_v1")
+tokenizer = get_or_build_arc_tokenizer("arc_tokenizer_v1")
 
 ##################################################
 # Simple PL module wrapping your new model
@@ -147,7 +147,7 @@ class ARCTrainerModule(pl.LightningModule):
 def evaluate_model(
     max_input_length,
     max_target_length,
-    dataset_split,  # can be 'test' or a subset
+    dataset_split,  # can be 'test' or a subset of dataset
     tokenizer,
     model_name,
     model_save_path,
@@ -156,11 +156,15 @@ def evaluate_model(
     ds_type="test",
     batch_size=16,
     force_rerun=False,
-    rm_ws=False,
+    rm_ws=True,
 ):
     """
     Evaluate model on 'dataset_split' (list or Dataset),
-    store results in a pickled DF, also compute exact match & sacrebleu.
+    store results in a pickled DF, and also compute:
+      - exact match
+      - token-level sacreBLEU
+    If rm_ws=True, remove <s>, </s>, <pad>, and whitespace from both
+    the generated output and the reference labels.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     eval_model = eval_model.to(device)
@@ -179,13 +183,12 @@ def evaluate_model(
             batch = dataset_split[start_idx:end_idx]
 
             # Tokenize inputs
-            # There's some assumption that 'batch["input"]' is text. Adjust as needed.
             inputs = tokenizer(
                 batch["input_text"],
                 return_tensors="pt",
                 padding="max_length",
                 truncation=True,
-                max_length=max_input_length, 
+                max_length=max_input_length,
             )
             input_ids = inputs.input_ids.to(device)
 
@@ -199,57 +202,79 @@ def evaluate_model(
             with torch.no_grad():
                 out_seqs = eval_model.generate(
                     input_ids,
-                    max_length=max_target_length+1, # +1 for the initial <pad>, aka T5's start generation token.
+                    max_length=max_target_length + 1,  # +1 for T5's start generation token
                     object_idx=object_idx,
                 )
 
-            # Decode
+            # Decode raw strings
             decoded = [
-                tokenizer.decode(seq, skip_special_tokens=False) for seq in out_seqs
+                tokenizer.decode(seq, skip_special_tokens=False)
+                for seq in out_seqs
             ]
 
-            # Possibly strip <s> / </s> / <pad>
-            if rm_ws:
-                generated = [
-                    re.sub(r"<s>|</s>|<pad>|\s+", "", d) for d in decoded
-                ]
-            else:
-                generated = [
-                    re.sub(r"<s>|</s>|<pad>", "", d) for d in decoded
-                ]
+            for i, gen_str in enumerate(decoded):
+                # Possibly strip <s> / </s> / <pad> / whitespace from the generated text
+                if rm_ws:
+                    gen_str = re.sub(r"<s>|</s>|<pad>|\s+", "", gen_str)
+                else:
+                    gen_str = re.sub(r"<s>|</s>|<pad>", "", gen_str)
 
-            # Build new rows
-            for i, g in enumerate(generated):
+                # Also possibly strip from the label text
+                lbl_str = batch["output_text"][i]
+                if rm_ws:
+                    lbl_str = re.sub(r"<s>|</s>|<pad>|\s+", "", lbl_str)
+                else:
+                    lbl_str = re.sub(r"<s>|</s>|<pad>", "", lbl_str)
+
                 row = {
                     "input": batch["input"][i],
-                    "label": batch["output"][i],
-                    "generated_output": g,
+                    "output": batch["output"][i],
+                    "label": lbl_str,
+                    "generated_output": gen_str,
                 }
-
-                row_df = pd.DataFrame([row])
-                results_df = pd.concat([results_df, row_df], ignore_index=True)                
+                results_df = pd.concat(
+                    [results_df, pd.DataFrame([row])],
+                    ignore_index=True
+                )
 
         results_df.to_pickle(results_pkl)
 
+    # --------------------------------------------------------------------
     # Compute metrics
+    # --------------------------------------------------------------------
+
+    # 1) Exact Match
     def exact_match(truth, pred):
         return truth == pred
 
     exact_matches = [
-        exact_match(r["label"], r["generated_output"])
-        for _, r in results_df.iterrows()
+        exact_match(row["label"], row["generated_output"])
+        for _, row in results_df.iterrows()
     ]
-    avg_exact = sum(exact_matches) / len(exact_matches)
+    avg_exact = sum(exact_matches) / len(exact_matches) if len(exact_matches) else 0.0
 
-    # sacrebleu
-    # TODO: use customized bleu for tokens
-    references = [[r["label"]] for _, r in results_df.iterrows()]
-    predictions = [r["generated_output"] for _, r in results_df.iterrows()]
+    # 2) Token-level BLEU
+    #    - Tokenize each label/pred. Then join with spaces to get a single string.
+    #    - sacrebleu expects a list of strings for `predictions`,
+    #      and a list of list-of-strings for `references`.
+    tokenized_preds = []
+    tokenized_refs = []
+    for _, row in results_df.iterrows():
+        pred_tokens = tokenizer.tokenize(row["generated_output"])
+        ref_tokens  = tokenizer.tokenize(row["label"])
+
+        pred_str = " ".join(pred_tokens)
+        ref_str  = " ".join(ref_tokens)
+
+        tokenized_preds.append(pred_str)
+        tokenized_refs.append([ref_str])
+
     sacre_bleu = bleu.compute(
-        predictions=predictions, references=references
+        predictions=tokenized_preds,
+        references=tokenized_refs
     )["score"]
 
-    # Log in a csv
+    # Log metrics in a CSV
     if os.path.exists(metrics_csv) and not force_rerun:
         mdf = pd.read_csv(metrics_csv)
     else:
@@ -259,18 +284,16 @@ def evaluate_model(
         "model_name": model_name,
         "exact_match": avg_exact,
         "bleu": sacre_bleu,
-    }    
-    new_row_df = pd.DataFrame([new_row])
-    mdf = pd.concat([mdf, new_row_df], ignore_index=True)
+    }
+    mdf = pd.concat([mdf, pd.DataFrame([new_row])], ignore_index=True)
     mdf.to_csv(metrics_csv, index=False)
+
     print(f"[INFO] {ds_type} results => exact_match={avg_exact:.3f}, BLEU={sacre_bleu:.2f}")
     print("[INFO] Detailed saved =>", results_pkl)
 
     # ----------------------
     # ADDING THE SUMMARY CSV
     # ----------------------
-    # For example, go two directories above `model_save_path`.
-    # You can change `os.pardir, os.pardir` if you only need one level up.
     summary_dir = os.path.abspath(os.path.join(model_save_path, os.pardir, os.pardir))
     summary_csv_path = os.path.join(summary_dir, f"{ds_type}_summary_metrics.csv")
 
@@ -288,6 +311,7 @@ def evaluate_model(
 
     summary_df.to_csv(summary_csv_path, index=False)
     print("Summary metrics saved to:", summary_csv_path)
+
 
 ################################################################
 # (Optional) HPC dataset existence checks
@@ -351,8 +375,7 @@ def main():
 
     else:
         # If no dataset found => generate a small dataset
-        print(f"[WARN] No dataset found for idx={task_idx}. Generating dataset of size 1M.")
-        from vitarc.datasets.gen_dataset import generate_single_dataset_hf
+        print(f"[WARN] No dataset found for idx={task_idx}. Generating dataset of size 1M.")        
         key, dataset, stats = generate_single_dataset_hf(
             task_idx=task_idx,
             seed=args.seed,            

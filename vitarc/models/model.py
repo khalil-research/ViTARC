@@ -192,7 +192,7 @@ class CustomT5Attention(T5Attention):
 
          # Defaults if not present in config
         self.ape_type = getattr(config, "ape_type", "SinusoidalAPE2D")
-        self.rpe_type = getattr(config, "rpe_type", "Four-diag-slope-Alibi")
+        self.rpe_type = getattr(config, "rpe_type", "Two-slope-Alibi")
         self.rpe_abs = getattr(config, "rpe_abs", True)
         self.use_OPE = getattr(config, "use_OPE", True)
         self.ape_mixer_strategy = getattr(config, "ape_mixer", "default")
@@ -206,7 +206,7 @@ class CustomT5Attention(T5Attention):
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
             device = self.relative_attention_bias.weight.device
 
-            if self.rpe_type == "Four-diag-slope-Alibi":
+            if self.rpe_type in ["Four-diag-slope-Alibi", "Two-slope-Alibi"]:
                 # Two slopes are sufficient here, since we manipudate the distance matrix with pre-added per-diag-direction ratios.
                 self.slopes_l = torch.Tensor(self.get_slopes(self.n_heads, start_exponent=1)).to(device)*-1
                 self.slopes_r = torch.Tensor(self.get_slopes(self.n_heads, start_exponent=0.5)).to(device)*-1
@@ -239,7 +239,7 @@ class CustomT5Attention(T5Attention):
         if self.rpe_type in ["NoRPE"]:
             # Zeros
             return torch.zeros((1, self.n_heads, query_length, key_length), device=device)        
-        elif self.rpe_type in ["Four-diag-slope-Alibi"]:            
+        elif self.rpe_type in ["Four-diag-slope-Alibi", "Two-slope-Alibi"]:            
             relative_position = relative_position.to(device)
 
             if self.rpe_abs:
@@ -362,7 +362,7 @@ class CustomT5Attention(T5Attention):
                 if self.gradient_checkpointing and self.training:
                     position_bias.requires_grad = True
             else:
-                if self.rpe_type in ["Four-diag-slope-Alibi"]:
+                if self.rpe_type in ["Four-diag-slope-Alibi", "Two-slope-Alibi"]:
                     position_bias = self.compute_bias(real_seq_length, key_length, device=scores.device, relative_position=relative_position)
                 else:                    
                     position_bias = self.compute_bias(real_seq_length, key_length, device=scores.device, relative_position=None)
@@ -483,7 +483,7 @@ class CustomT5Block(T5Block):
         super().__init__(config, has_relative_attention_bias)        
         # Defaults if not present in config
         self.ape_type = getattr(config, "ape_type", "SinusoidalAPE2D")
-        self.rpe_type = getattr(config, "rpe_type", "Four-diag-slope-Alibi")
+        self.rpe_type = getattr(config, "rpe_type", "Two-slope-Alibi")
         self.rpe_abs = getattr(config, "rpe_abs", True)
         self.use_OPE = getattr(config, "use_OPE", True)
         self.ape_mixer_strategy = getattr(config, "ape_mixer", "default")
@@ -616,7 +616,7 @@ class CustomT5Stack(T5Stack):
 
         # Defaults if not present in config
         self.ape_type = getattr(config, "ape_type", "SinusoidalAPE2D")
-        self.rpe_type = getattr(config, "rpe_type", "Four-diag-slope-Alibi")
+        self.rpe_type = getattr(config, "rpe_type", "Two-slope-Alibi")
         self.rpe_abs = getattr(config, "rpe_abs", True)
         self.use_OPE = getattr(config, "use_OPE", True)
         self.ape_mixer_strategy = getattr(config, "ape_mixer", "default")
@@ -654,7 +654,7 @@ class CustomT5Stack(T5Stack):
             # 1D APE for decoder/ non-2d positions
             self.wpe = FixedAbsolutePositionalEmbedding(config.d_model)
 
-        if self.rpe_type == "Four-diag-slope-Alibi":
+        if self.rpe_type in ["Four-diag-slope-Alibi", "Two-slope-Alibi"]:
             # Calculate relative positions for the 2D grid
             # Four different slopes for each diag direction, top-left, top-right, down-left, down-right
             grid_height = self.config.rows # 33
@@ -766,7 +766,7 @@ class CustomT5Stack(T5Stack):
             err_msg_prefix = "decoder_" if self.is_decoder else ""
             raise ValueError(f"You have to specify either {err_msg_prefix}input_ids or {err_msg_prefix}inputs_embeds")
 
-        if self.rpe_type == "Four-diag-slope-Alibi":
+        if self.rpe_type in ["Four-diag-slope-Alibi", "Two-slope-Alibi"]:
             relative_position = self.distance_matrix_2D
 
         if inputs_embeds is None:
@@ -1092,7 +1092,7 @@ class ViTARCForConditionalGeneration(T5ForConditionalGeneration):
 
     This model can read the following fields from the T5Config (if present):
       - ape_type (str): e.g. 'SinusoidalAPE', 'SinusoidalAPE2D', 'LearnedAPE', or 'none'. Defaults to 'SinusoidalAPE2D'.
-      - rpe_type (str): e.g. 'Four-diag-slope-Alibi','Two-slope-Alibi'. Defaults to 'Four-diag-slope-Alibi'.
+      - rpe_type (str): e.g. 'Four-diag-slope-Alibi','Two-slope-Alibi'. Defaults to 'Two-slope-Alibi'.
       - rpe_abs (bool): default True or False if not present.
       - use_OPE (bool): default True.
       - ape_mixer (str): indicates the approach to mixing embeddings, e.g. 'learnable_scaling', 'weighted_sum', etc.
@@ -1106,7 +1106,7 @@ class ViTARCForConditionalGeneration(T5ForConditionalGeneration):
         """
         # Defaults if not present in config
         self.ape_type = getattr(config, "ape_type", "SinusoidalAPE2D")
-        self.rpe_type = getattr(config, "rpe_type", "Four-diag-slope-Alibi")
+        self.rpe_type = getattr(config, "rpe_type", "Two-slope-Alibi")
         self.rpe_abs = getattr(config, "rpe_abs", True)
         self.use_OPE = getattr(config, "use_OPE", True)
         self.ape_mixer_strategy = getattr(config, "ape_mixer", "default")
@@ -1154,7 +1154,8 @@ class ViTARCForConditionalGeneration(T5ForConditionalGeneration):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,               
-        object_idx: Optional[torch.FloatTensor] = None,                
+        object_idx: Optional[torch.FloatTensor] = None,   
+        **kwargs      # To ignore new HF transformer params like cache_position       
     ) -> Union[Tuple[torch.FloatTensor], Seq2SeqLMOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
