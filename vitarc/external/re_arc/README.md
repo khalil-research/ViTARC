@@ -22,3 +22,5 @@ demo_generator('00d62c1b')
 
 ![00d62c1b (generated)](00d62c1b_generated.png "00d62c1b (generated)")
 
+
+#### Modified and modulized for ViTARC

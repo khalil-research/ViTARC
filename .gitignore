@@ -1,12 +1,16 @@
 # Ignore the virtual environment folder
 venv/
 
+# Ignore egginfo
+ViTARC.egg-info/
+
 # Ignore the test_cuda.py script
 test_cuda.py
 
 # Python cache files
 __pycache__/
 *.py[cod]
+.pytest_cache/
 
 # Mac / Windows system files
 .DS_Store
