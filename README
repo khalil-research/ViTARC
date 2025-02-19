@@ -1,60 +1,60 @@
-```
-ViTARC: Tackling the Abstraction and Reasoning Corpus with Vision Transformers
-===========================================================================
-
+# ViTARC: Tackling the Abstraction and Reasoning Corpus with Vision Transformers
 **Paper:** [Tackling the Abstraction and Reasoning Corpus with Vision Transformers: the Importance of 2D Representation, Positions, and Objects](https://arxiv.org/abs/2410.06405)
 
 This repository provides code to generate ARC-like datasets, build a custom T5-based model with 2D positional embeddings, and train end-to-end on those tasks. It is structured for quick experimentation with different ARC tasks, custom tokenizers, and a flexible pipeline using Hugging Face Transformers and PyTorch Lightning.
 
-License: **MIT**.
+**License:** MIT.
 
----------------------------------------------------------------------------
-REQUIREMENTS
+---
+
+## Requirements
 
 - Python 3.10 (recommended: 3.10.12)
 - Additional packages as listed in:
   - `requirements.txt` (strict pinned versions)
   - `setup_full.py` (if you need a more strongly pinned environment)
 
----------------------------------------------------------------------------
-QUICK START
+---
+
+## Quick Start
 
 1. **Clone the Repository & Create a Virtual Environment**
 
-   ```bash
-   git clone https://github.com/yourusername/ViTARC.git
-   cd ViTARC
-   python3.10 -m venv venv
-   source venv/bin/activate
-   ```
+    ```bash
+    git clone https://github.com/yourusername/ViTARC.git
+    cd ViTARC
+    python3.10 -m venv venv
+    source venv/bin/activate
+    ```
 
 2. **Install the Package**
 
-   ```bash
-   pip install --upgrade pip
-   pip install -e .
-   ```
+    ```bash
+    pip install --upgrade pip
+    pip install -e .
+    ```
 
 3. **Run the Training Script**
 
-   ```bash
-   python vitarc/training/train.py
-   ```
+    ```bash
+    python vitarc/training/train.py
+    ```
 
-   **Command-line arguments**:
-   ```
-   --task_idx (int, default=0)
-   --max_input_length (int, default=1124)
-   --max_target_length (int, default=1124)
-   --batch_size (int, default=8)
-   --epochs (int, default=1)
-   --seed (int, default=1230)
-   --ds_base_dir (str, default="./arc_x2y_datasets")
-   --use_slurm_copy (bool, default=False)   # HPC copy to SLURM_TMPDIR
-   ```
+    **Command-line arguments**:
+    ```
+    --task_idx (int, default=0)
+    --max_input_length (int, default=1124)
+    --max_target_length (int, default=1124)
+    --batch_size (int, default=8)
+    --epochs (int, default=1)
+    --seed (int, default=1230)
+    --ds_base_dir (str, default="./arc_x2y_datasets")
+    --use_slurm_copy (bool, default=False)   # HPC copy to SLURM_TMPDIR
+    ```
 
----------------------------------------------------------------------------
-REPOSITORY LAYOUT
+---
+
+## Repository Layout
 
 ```
 .
@@ -86,10 +86,11 @@ REPOSITORY LAYOUT
         └── train.py
 ```
 
----------------------------------------------------------------------------
-DATASET GENERATION (re_arc CODE)
+---
 
-We generate ARC-like datasets by leveraging code from `re_arc` (MIT licensed, https://github.com/michaelhodel/re-arc), included under `vitarc/external/re_arc`. See `LICENSE_re_arc` in that folder for more details.
+## Dataset Generation (re_arc Code)
+
+We generate ARC-like datasets by leveraging code from `re_arc` (MIT licensed, [https://github.com/michaelhodel/re-arc](https://github.com/michaelhodel/re-arc)), included under `vitarc/external/re_arc`. See `LICENSE_re_arc` in that folder for more details.
 
 A simple usage example:
 
@@ -106,8 +107,9 @@ task_key, final_ds, stats = generate_single_dataset_hf(
 
 This returns a Hugging Face `DatasetDict` with `train`, `validation`, and `test` splits. See `tests/test_gen_dataset.py` for more detailed usage.
 
----------------------------------------------------------------------------
-TOKENIZER GENERATION
+---
+
+## Tokenizer Generation
 
 We use a Hugging Face–style tokenizer for ARC tasks:
 
@@ -119,10 +121,12 @@ tokenizer = get_or_build_arc_tokenizer("arc_tokenizer_v1")
 
 This returns a tokenizer configured for ARC-like inputs/outputs. See `tests/test_tokenizer.py` for an example.
 
----------------------------------------------------------------------------
-MODEL OVERVIEW
+---
+
+## Model Overview
 
 **`ViTARCForConditionalGeneration`** is a specialized T5-based model that introduces:
+
 - 2D absolute positional embeddings (`ape_type="SinusoidalAPE2D"`)
 - Relative attention with four-slope Alibi (`rpe_type="Four-diag-slope-Alibi"`)
 - Object-based embeddings (`use_OPE=True`)
@@ -160,10 +164,12 @@ model = ViTARCForConditionalGeneration(config)
 
 See `vitarc/training/train.py` for a full training loop based on PyTorch Lightning.
 
----------------------------------------------------------------------------
-CITATION & LICENSE
+---
 
-**License**: MIT.  
+## Citation & License
+
+**License**: MIT.
+
 **If you use or reference this code, please cite**:
 
 > **Tackling the Abstraction and Reasoning Corpus with Vision Transformers: the Importance of 2D Representation, Positions, and Objects**  
@@ -174,4 +180,3 @@ This code relies on:
 - PyTorch & PyTorch Lightning
 - re_arc (MIT license) for generating ARC tasks
 - Datasets (Hugging Face)
-```
