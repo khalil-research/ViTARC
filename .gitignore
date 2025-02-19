@@ -7,6 +7,9 @@ ViTARC.egg-info/
 # Ignore the test_cuda.py script
 test_cuda.py
 
+# Ignore generated datasets and results
+arc_x2y_datasets/
+
 # Python cache files
 __pycache__/
 *.py[cod]

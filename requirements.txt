@@ -124,7 +124,6 @@ triton==2.3.1
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.3
--e git+https://github.com/chris91219/ViTARC.git@1cb33887be7ed83ff40bf3cb36f8d46293e31665#egg=ViTARC
 wandb==0.18.1
 wcwidth==0.2.13
 xxhash==3.2.0
