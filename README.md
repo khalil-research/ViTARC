@@ -21,7 +21,7 @@ This repository provides code to generate ARC-like datasets, build a custom T5-b
 1. **Clone the Repository & Create a Virtual Environment**
 
     ```bash
-    git clone https://github.com/yourusername/ViTARC.git
+    git clone https://github.com/khalil-research/ViTARC.git
     cd ViTARC
     python3.10 -m venv venv
     source venv/bin/activate
